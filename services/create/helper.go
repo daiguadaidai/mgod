@@ -1,4 +1,4 @@
-package service
+package create
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 )
 
 // 获取开始的位点信息
-func GetStartPosition(sc *config.StartConfig, dbc *config.DBConfig) (*models.Position, error) {
-	if sc.HaveStartPosInfo() { // 有设置开始位点信息
-		return getPositionByPosInfo(sc.StartLogFile, sc.StartLogPos), nil
+func GetStartPosition(cc *config.CreateConfig, dbc *config.DBConfig) (*models.Position, error) {
+	if cc.HaveStartPosInfo() { // 有设置开始位点信息
+		return getPositionByPosInfo(cc.StartLogFile, cc.StartLogPos), nil
 	}
 
-	if sc.HaveStartTime() { // 有设置开始时间
-		ts, err := utils.StrTime2Int(sc.StartTime)
+	if cc.HaveStartTime() { // 有设置开始时间
+		ts, err := utils.StrTime2Int(cc.StartTime)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func getSecondEventTimeBySyncer(
 	dbc *config.DBConfig,
 ) (uint32, error) {
 	cfg := dbc.GetSyncerConfig()
-	syncer := replication.NewBinlogSyncer(&cfg)
+	syncer := replication.NewBinlogSyncer(cfg)
 	defer syncer.Close()
 
 	streamer, err := syncer.StartSync(mysql.Position{logFile, logPos})
@@ -145,37 +145,37 @@ var (
 Return:
 [
 	{
-        schema: 数据库名,
+        cchema: 数据库名,
         table: 表名
     },
     ......
 ]
 */
-func FindRollbackTables(sc *config.StartConfig) ([]*models.DBTable, RollbackType, error) {
+func FindRollbackTables(cc *config.CreateConfig) ([]*models.DBTable, RollbackType, error) {
 	rollbackTables := make([]*models.DBTable, 0, 1)
 
 	// 没有指定表, 说明使用所有的表
-	if len(sc.RollbackSchemas) == 0 && len(sc.RollbackTables) == 0 {
+	if len(cc.RollbackSchemas) == 0 && len(cc.RollbackTables) == 0 {
 		return rollbackTables, RollbackAllTable, nil
 	}
 
-	notAllTableSchema := make(map[string]bool) // 如果指定的表中有指定schema. 则代表该schema不不要所有的表
-	for _, table := range sc.RollbackTables {
+	notAllTableSchema := make(map[string]bool) // 如果指定的表中有指定cchema. 则代表该cchema不不要所有的表
+	for _, table := range cc.RollbackTables {
 		items := strings.Split(table, ".")
 		switch len(items) {
-		case 1: // table. 没有指定schema, 只指定了table
-			if len(sc.RollbackSchemas) == 0 { // 该表没有指定库
+		case 1: // table. 没有指定cchema, 只指定了table
+			if len(cc.RollbackSchemas) == 0 { // 该表没有指定库
 				return nil, RollbackNone, fmt.Errorf("表:%v. 没有指定库", table)
 			}
-			for _, schema := range sc.RollbackSchemas {
-				if _, ok := notAllTableSchema[schema]; !ok {
-					notAllTableSchema[schema] = true
+			for _, cchema := range cc.RollbackSchemas {
+				if _, ok := notAllTableSchema[cchema]; !ok {
+					notAllTableSchema[cchema] = true
 				}
 
-				t := models.NewDBTable(schema, table)
+				t := models.NewDBTable(cchema, table)
 				rollbackTables = append(rollbackTables, t)
 			}
-		case 2: // schema.table 的格式, 代表有指定schema 和 table
+		case 2: // cchema.table 的格式, 代表有指定cchema 和 table
 			if _, ok := notAllTableSchema[items[0]]; !ok {
 				notAllTableSchema[items[0]] = true
 			}
@@ -186,14 +186,14 @@ func FindRollbackTables(sc *config.StartConfig) ([]*models.DBTable, RollbackType
 		}
 	}
 
-	// 要是指定的schema, 不存在于 notAllTableSchema 这个变量中, 说明这个schema中的表都需要回滚
-	for _, schema := range sc.RollbackSchemas {
-		if _, ok := notAllTableSchema[schema]; ok {
+	// 要是指定的cchema, 不存在于 notAllTableSchema 这个变量中, 说明这个cchema中的表都需要回滚
+	for _, cchema := range cc.RollbackSchemas {
+		if _, ok := notAllTableSchema[cchema]; ok {
 			continue
 		}
-		notAllTableSchema[schema] = true
+		notAllTableSchema[cchema] = true
 
-		tables, err := dao.NewDefaultDao().FindTablesBySchema(schema)
+		tables, err := dao.NewDefaultDao().FindTablesBySchema(cchema)
 		if err != nil {
 			return nil, RollbackNone, fmt.Errorf("获取数据库下面的所有表失败. %v", err)
 		}

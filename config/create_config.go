@@ -14,9 +14,9 @@ const (
 	SAVE_DIR               = "rollback_sqls"
 )
 
-var sc *StartConfig
+var sc *CreateConfig
 
-type StartConfig struct {
+type CreateConfig struct {
 	StartLogFile         string
 	StartLogPos          uint32
 	EndLogFile           string
@@ -35,18 +35,18 @@ type StartConfig struct {
 	UpdateAPI            string
 }
 
-func NewStartConfig() *StartConfig {
-	return &StartConfig{
+func NewStartConfig() *CreateConfig {
+	return &CreateConfig{
 		Now: time.Now(),
 	}
 }
 
-func SetStartConfig(cfg *StartConfig) {
+func SetStartConfig(cfg *CreateConfig) {
 	sc = cfg
 }
 
 // 是否有开始位点信息
-func (this *StartConfig) HaveStartPosInfo() bool {
+func (this *CreateConfig) HaveStartPosInfo() bool {
 	if this.StartLogFile == "" {
 		return false
 	}
@@ -54,7 +54,7 @@ func (this *StartConfig) HaveStartPosInfo() bool {
 }
 
 // 是否所有结束位点信息
-func (this *StartConfig) HaveEndPosInfo() bool {
+func (this *CreateConfig) HaveEndPosInfo() bool {
 	if this.EndLogFile == "" {
 		return false
 	}
@@ -62,7 +62,7 @@ func (this *StartConfig) HaveEndPosInfo() bool {
 }
 
 // 是否有开始事件
-func (this *StartConfig) HaveStartTime() bool {
+func (this *CreateConfig) HaveStartTime() bool {
 	if this.StartTime == "" {
 		return false
 	}
@@ -70,7 +70,7 @@ func (this *StartConfig) HaveStartTime() bool {
 }
 
 // 是否有结束时间
-func (this *StartConfig) HaveEndTime() bool {
+func (this *CreateConfig) HaveEndTime() bool {
 	if this.EndTime == "" {
 		return false
 	}
@@ -78,7 +78,7 @@ func (this *StartConfig) HaveEndTime() bool {
 }
 
 // 设置最终的保存文件
-func (this *StartConfig) GetSaveDir() string {
+func (this *CreateConfig) GetSaveDir() string {
 	if len(this.SaveDir) == 0 {
 		cmdDir, err := utils.CMDDir()
 		if err != nil {
@@ -93,7 +93,7 @@ func (this *StartConfig) GetSaveDir() string {
 	return this.SaveDir
 }
 
-func (this *StartConfig) Check() error {
+func (this *CreateConfig) Check() error {
 	if err := this.checkCondition(); err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (this *StartConfig) Check() error {
 	return nil
 }
 
-func (this *StartConfig) checkCondition() error {
+func (this *CreateConfig) checkCondition() error {
 	if this.StartLogFile != "" && this.StartLogPos >= 0 &&
 		this.EndLogFile != "" && this.EndLogPos >= 0 {
 		return nil

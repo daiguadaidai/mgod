@@ -9,6 +9,8 @@ import (
 type realInfo struct {
 	RollbackSQLFile string `json:"rollback_sql_file" form:"rollback_sql_file"`
 	OriSQLFile      string `json:"ori_sql_file" form:"ori_sql_file"`
+	Host            string `json:"host" form:"host"`
+	Port            int    `json:"port" form:"port"`
 }
 
 func (this *realInfo) ToJSON() (string, error) {
@@ -30,6 +32,8 @@ type ContainerData struct {
 	TaskUUID        string
 	RollbackSQLFile string
 	OriSQLFile      string
+	Host            string
+	Port            int
 }
 
 type Saver struct {
@@ -40,6 +44,8 @@ func (this *Saver) Save(data *ContainerData) error {
 	ri := &realInfo{
 		RollbackSQLFile: data.RollbackSQLFile,
 		OriSQLFile:      data.OriSQLFile,
+		Host:            data.Host,
+		Port:            data.Port,
 	}
 	realInfoStr, err := ri.ToJSON()
 	if err != nil {

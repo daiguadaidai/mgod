@@ -564,6 +564,8 @@ func (this *MGod) saveInfo() {
 			TaskUUID:        this.SC.TaskUUID,
 			RollbackSQLFile: this.RollbackSQLFile,
 			OriSQLFile:      this.OriSQLFile,
+			Host:            this.DBC.Host,
+			Port:            this.DBC.Port,
 		}
 		if err := saver.Save(data); err != nil {
 			seelog.Error(err.Error())

@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"fmt"
 	"github.com/daiguadaidai/mgod/gdbc"
 	"github.com/daiguadaidai/mgod/models"
 	"github.com/jinzhu/gorm"
@@ -132,7 +133,7 @@ func (this *DefaultDao) FindTableUKColumnNames(sName string, tName string) ([]st
 }
 
 // 获取第一个唯一键
-func (this DefaultDao) GetUKName(sName string, tName string) (string, error) {
+func (this *DefaultDao) GetUKName(sName string, tName string) (string, error) {
 	sql := `
     SELECT CONSTRAINT_NAME
     FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
@@ -148,4 +149,32 @@ func (this DefaultDao) GetUKName(sName string, tName string) (string, error) {
 	}
 
 	return ukName, nil
+}
+
+// 执行dml
+func (this *DefaultDao) ExecDML(sql string) error {
+	return this.DB.Exec(sql).Error
+}
+
+// 获取最老和最新的日志位点
+func (this *DefaultDao) GetOldestAndNewestPos() (*models.Position, *models.Position, error) {
+	logs, err := this.ShowBinaryLogs()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(logs) == 0 {
+		return nil, nil, fmt.Errorf("没有binlog")
+	}
+
+	startPos := &models.Position{
+		File:     logs[0].LogName,
+		Position: 4,
+	}
+	endPos := &models.Position{
+		File:     logs[len(logs)-1].LogName,
+		Position: logs[len(logs)-1].FileSize,
+	}
+
+	return startPos, endPos, nil
 }

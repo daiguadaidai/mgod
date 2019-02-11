@@ -133,14 +133,14 @@ func (this *Table) initUpdateTemplate() {
 	template := "UPDATE `%s`.`%s` SET %s WHERE %s;\n"
 	this.UpdateTemplate = fmt.Sprintf(template, this.SchemaName, this.TableName,
 		utils.SqlExprPlaceholderByColumns(this.ColumnNames, "=", "%#v", ", "),
-		utils.SqlExprPlaceholderByColumns(this.PKColumnNames, "=", "%#v", ", "))
+		utils.SqlExprPlaceholderByColumns(this.PKColumnNames, "=", "%#v", "AND "))
 }
 
 // 初始化 delete sql 模板
 func (this *Table) initDeleteTemplate() {
 	template := "DELETE FROM `%s`.`%s` WHERE %s;\n"
 	this.DeleteTemplate = fmt.Sprintf(template, this.SchemaName, this.TableName,
-		utils.SqlExprPlaceholderByColumns(this.PKColumnNames, "=", "%#v", ", "))
+		utils.SqlExprPlaceholderByColumns(this.PKColumnNames, "=", "%#v", "AND "))
 }
 
 func (this *Table) SetPKValues(row []interface{}, pkValues []interface{}) {

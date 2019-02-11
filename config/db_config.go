@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/daiguadaidai/mgod/utils"
 	"github.com/siddontang/go-mysql/replication"
 	"strings"
 )
@@ -61,8 +62,8 @@ func (this *DBConfig) Check() error {
 }
 
 // 设置 DBConfig
-func SetDBConfig(_dbConfig *DBConfig) {
-	dbConfig = _dbConfig
+func SetDBConfig(dbc *DBConfig) {
+	dbConfig = dbc
 }
 
 func GetDBConfig() *DBConfig {
@@ -71,7 +72,7 @@ func GetDBConfig() *DBConfig {
 
 func (this *DBConfig) GetSyncerConfig() replication.BinlogSyncerConfig {
 	return replication.BinlogSyncerConfig{
-		ServerID: 100,
+		ServerID: utils.RandRangeUint32(100000000, 200000000),
 		Flavor:   "mysql",
 		Host:     this.Host,
 		Port:     uint16(this.Port),

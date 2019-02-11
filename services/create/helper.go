@@ -17,7 +17,12 @@ import (
 // 获取开始的位点信息
 func GetStartPosition(cc *config.CreateConfig, dbc *config.DBConfig) (*models.Position, error) {
 	if cc.HaveStartPosInfo() { // 有设置开始位点信息
-		return getPositionByPosInfo(cc.StartLogFile, cc.StartLogPos), nil
+		startPos := getPositionByPosInfo(cc.StartLogFile, cc.StartLogPos)
+		// 检测开始位点是否在系统保留的binlog范围内
+		if err := checkStartPosInRange(startPos); err != nil {
+			return nil, err
+		}
+		return startPos, nil
 	}
 
 	if cc.HaveStartTime() { // 有设置开始时间
@@ -37,6 +42,27 @@ func getPositionByPosInfo(logFile string, logPos uint32) *models.Position {
 		File:     logFile,
 		Position: logPos,
 	}
+}
+
+// 检测开始位点是否在系统保留的binlog范围内
+func checkStartPosInRange(startPos *models.Position) error {
+	// 获取 最老和最新的位点信息
+	oldestPos, newestPos, err := dao.NewDefaultDao().GetOldestAndNewestPos()
+	if err != nil {
+		return err
+	}
+
+	if startPos.LessThan(oldestPos) {
+		return fmt.Errorf("指定的开始位点 %s:%d 太过久远. 存在最老的binlog为: %s",
+			startPos.File, startPos.Position, oldestPos.File)
+	}
+
+	if newestPos.LessThan(startPos) {
+		return fmt.Errorf("指定的开始位点 %s:%d 还没有生成. 存在最新的binlog为: %s:%d",
+			startPos.File, startPos.Position, newestPos.File, newestPos.Position)
+	}
+
+	return nil
 }
 
 // 通过开始时间获取位点信息

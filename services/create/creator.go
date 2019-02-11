@@ -561,7 +561,7 @@ func (this *Creator) getSqlFileName(prefix string) string {
 // 保存相关数据
 func (this *Creator) saveInfo() error {
 	if len(this.CC.TaskUUID) > 0 && len(this.CC.UpdateAPI) > 0 {
-		ri := &types.RealInfo{
+		ri := &types.CreateRealInfo{
 			RollbackSQLFile: this.RollbackSQLFile,
 			OriSQLFile:      this.OriSQLFile,
 			Host:            this.DBC.Host,

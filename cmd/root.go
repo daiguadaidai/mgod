@@ -20,6 +20,7 @@ import (
 
 	"github.com/daiguadaidai/mgod/config"
 	"github.com/daiguadaidai/mgod/services/create"
+	"github.com/daiguadaidai/mgod/services/execute"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +37,7 @@ var createCmd = &cobra.Command{
 	Long: `生成回滚的sql. 如下:
 Example:
 指定 开始位点 和 结束位点
-./mgod \
+./mgod create \
     --start-log-file="mysql-bin.000090" \
     --start-log-pos=0 \
     --end-log-file="mysql-bin.000092" \
@@ -52,7 +53,7 @@ Example:
     --db-password="root"
 
 指定 开始位点 和 结束时间
-./mgod \
+./mgod create \
     --start-log-file="mysql-bin.000090" \
     --start-log-pos=0 \
     --end-time="2018-12-17 15:36:58" \
@@ -67,7 +68,7 @@ Example:
     --db-password="root"
 
 指定 开始时间 和 结束时间
-./mgod \
+./mgod create \
     --start-time="2018-12-14 15:00:00" \
     --end-time="2018-12-17 15:36:58" \
     --thread-id=15 \
@@ -80,11 +81,11 @@ Example:
     --db-port=3306 \
     --db-username="root" \
     --db-password="root" \
-    --task-uuid="" \
-    --real-info-api=""
+    --task-uuid="201901182256351181056356ymnuqk" \
+    --update-api="/api/v1/pili/tasks"
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		create.Start(sc, dbc)
+		create.Start(cc, cdbc)
 	},
 }
 
@@ -93,9 +94,26 @@ var executeCmd = &cobra.Command{
 	Use:   "execute",
 	Short: "执行sql回滚文件",
 	Long: `倒序执行指定的sql回滚文件. 如下:
+Example:
+使用文件名
+./mgod execute \
+    --filepath="/tmp/test.sql" \ 
+    --db-host="127.0.0.1" \
+    --db-port=3306 \
+    --db-username="root" \
+    --db-password="root"
 
+使用接口
+./mgod execute \
+    --task-uuid="201901182256351181056356ymnuqk" \
+    --parent-task-uuid="201901182256351181056356ymnuqk" \
+    --read-api="http://127.0.0.1:19528/api/v1/pili/tasks/get" \
+    --update-api="http://127.0.0.1:19528/api/v1/pili/tasks" \
+    --db-username="root" \
+    --db-password="root"
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		execute.Start(ec, edbc)
 	},
 }
 
@@ -110,66 +128,110 @@ func Execute() {
 
 func init() {
 	addCreateCMD()
+	addExecuteCMD()
 }
 
-var sc *config.CreateConfig
-var dbc *config.DBConfig
+var cc *config.CreateConfig
+var cdbc *config.DBConfig
 
 // 添加创建回滚SQL子命令
 func addCreateCMD() {
 	rootCmd.AddCommand(createCmd)
-	sc = config.NewStartConfig()
-	createCmd.PersistentFlags().StringVar(&sc.StartLogFile, "start-log-file",
+	cc = config.NewStartConfig()
+	createCmd.PersistentFlags().StringVar(&cc.StartLogFile, "start-log-file",
 		"", "开始日志文件")
-	createCmd.PersistentFlags().Uint32Var(&sc.StartLogPos, "start-log-pos",
+	createCmd.PersistentFlags().Uint32Var(&cc.StartLogPos, "start-log-pos",
 		0, "开始日志文件点位")
-	createCmd.PersistentFlags().StringVar(&sc.EndLogFile, "end-log-file",
+	createCmd.PersistentFlags().StringVar(&cc.EndLogFile, "end-log-file",
 		"", "结束日志文件")
-	createCmd.PersistentFlags().Uint32Var(&sc.EndLogPos, "end-log-pos",
+	createCmd.PersistentFlags().Uint32Var(&cc.EndLogPos, "end-log-pos",
 		0, "结束日志文件点位")
-	createCmd.PersistentFlags().StringVar(&sc.StartTime, "start-time",
+	createCmd.PersistentFlags().StringVar(&cc.StartTime, "start-time",
 		"", "开始时间")
-	createCmd.PersistentFlags().StringVar(&sc.EndTime, "end-time",
+	createCmd.PersistentFlags().StringVar(&cc.EndTime, "end-time",
 		"", "结束时间")
-	createCmd.PersistentFlags().StringSliceVar(&sc.RollbackSchemas, "rollback-schema",
+	createCmd.PersistentFlags().StringSliceVar(&cc.RollbackSchemas, "rollback-schema",
 		make([]string, 0, 1), "指定回滚的数据库, 该命令可以指定多个")
-	createCmd.PersistentFlags().StringSliceVar(&sc.RollbackTables, "rollback-table",
+	createCmd.PersistentFlags().StringSliceVar(&cc.RollbackTables, "rollback-table",
 		make([]string, 0, 1), "需要回滚的表, 该命令可以指定多个")
-	createCmd.PersistentFlags().Uint32Var(&sc.ThreadID, "thread-id",
+	createCmd.PersistentFlags().Uint32Var(&cc.ThreadID, "thread-id",
 		0, "需要rollback的thread id")
-	createCmd.PersistentFlags().BoolVar(&sc.EnableRollbackInsert, "enable-rollback-insert",
+	createCmd.PersistentFlags().BoolVar(&cc.EnableRollbackInsert, "enable-rollback-insert",
 		config.ENABLE_ROLLBACK_INSERT, "是否启用回滚 insert")
-	createCmd.PersistentFlags().BoolVar(&sc.EnableRollbackUpdate, "enable-rollback-update",
+	createCmd.PersistentFlags().BoolVar(&cc.EnableRollbackUpdate, "enable-rollback-update",
 		config.ENABLE_ROLLBACK_UPDATE, "是否启用回滚 update")
-	createCmd.PersistentFlags().BoolVar(&sc.EnableRollbackDelete, "enable-rollback-delete",
+	createCmd.PersistentFlags().BoolVar(&cc.EnableRollbackDelete, "enable-rollback-delete",
 		config.ENABLE_ROLLBACK_DELETE, "是否启用回滚 delete")
-	createCmd.PersistentFlags().StringVar(&sc.SaveDir, "save-dir",
+	createCmd.PersistentFlags().StringVar(&cc.SaveDir, "save-dir",
 		"", "相关文件保存的路径")
-	createCmd.PersistentFlags().StringVar(&sc.TaskUUID, "task-uuid",
+	createCmd.PersistentFlags().StringVar(&cc.TaskUUID, "task-uuid",
 		"", "关联的任务UUID")
-	createCmd.PersistentFlags().StringVar(&sc.UpdateAPI, "update-api",
+	createCmd.PersistentFlags().StringVar(&cc.UpdateAPI, "update-api",
 		"", "更新任务信息API")
 
-	dbc = new(config.DBConfig)
+	cdbc = new(config.DBConfig)
 	// 链接的数据库配置
-	createCmd.PersistentFlags().StringVar(&dbc.Host, "db-host",
+	createCmd.PersistentFlags().StringVar(&cdbc.Host, "db-host",
 		config.DB_HOST, "数据库host")
-	createCmd.PersistentFlags().IntVar(&dbc.Port, "db-port",
+	createCmd.PersistentFlags().IntVar(&cdbc.Port, "db-port",
 		config.DB_PORT, "数据库port")
-	createCmd.PersistentFlags().StringVar(&dbc.Username, "db-username",
+	createCmd.PersistentFlags().StringVar(&cdbc.Username, "db-username",
 		config.DB_USERNAME, "数据库用户名")
-	createCmd.PersistentFlags().StringVar(&dbc.Password, "db-password",
+	createCmd.PersistentFlags().StringVar(&cdbc.Password, "db-password",
 		config.DB_PASSWORD, "数据库密码")
-	createCmd.PersistentFlags().StringVar(&dbc.Database, "db-schema",
+	createCmd.PersistentFlags().StringVar(&cdbc.Database, "db-schema",
 		config.DB_SCHEMA, "数据库名称")
-	createCmd.PersistentFlags().StringVar(&dbc.CharSet, "db-charset",
+	createCmd.PersistentFlags().StringVar(&cdbc.CharSet, "db-charset",
 		config.DB_CHARSET, "数据库字符集")
-	createCmd.PersistentFlags().IntVar(&dbc.Timeout, "db-timeout",
+	createCmd.PersistentFlags().IntVar(&cdbc.Timeout, "db-timeout",
 		config.DB_TIMEOUT, "数据库timeout")
-	createCmd.PersistentFlags().IntVar(&dbc.MaxIdelConns, "db-max-idel-conns",
+	createCmd.PersistentFlags().IntVar(&cdbc.MaxIdelConns, "db-max-idel-conns",
 		config.DB_MAX_IDEL_CONNS, "数据库最大空闲连接数")
-	createCmd.PersistentFlags().IntVar(&dbc.MaxOpenConns, "db-max-open-conns",
+	createCmd.PersistentFlags().IntVar(&cdbc.MaxOpenConns, "db-max-open-conns",
 		config.DB_MAX_OPEN_CONNS, "数据库最大连接数")
-	createCmd.PersistentFlags().BoolVar(&dbc.AutoCommit, "db-auto-commit",
+	createCmd.PersistentFlags().BoolVar(&cdbc.AutoCommit, "db-auto-commit",
+		config.DB_AUTO_COMMIT, "数据库自动提交")
+}
+
+// 添加创建回滚SQL子命令
+var ec *config.ExecuteConfig
+var edbc *config.DBConfig
+
+func addExecuteCMD() {
+	rootCmd.AddCommand(executeCmd)
+
+	ec = new(config.ExecuteConfig)
+	executeCmd.PersistentFlags().StringVar(&ec.FilePath, "filepath",
+		"", "指定执行的文件")
+	executeCmd.PersistentFlags().StringVar(&ec.TaskUUID, "task-uuid",
+		"", "关联的任务UUID")
+	executeCmd.PersistentFlags().StringVar(&ec.ParentTaskUUID, "parent-task-uuid",
+		"", "父任务ID")
+	executeCmd.PersistentFlags().StringVar(&ec.UpdateAPI, "update-api",
+		"", "更新任务信息API")
+	executeCmd.PersistentFlags().StringVar(&ec.ReadAPI, "read-api",
+		"", "读取信息的API")
+
+	edbc = new(config.DBConfig)
+	// 链接的数据库配置
+	executeCmd.PersistentFlags().StringVar(&edbc.Host, "db-host",
+		"", "数据库host")
+	executeCmd.PersistentFlags().IntVar(&edbc.Port, "db-port",
+		-1, "数据库port")
+	executeCmd.PersistentFlags().StringVar(&edbc.Username, "db-username",
+		"", "数据库用户名")
+	executeCmd.PersistentFlags().StringVar(&edbc.Password, "db-password",
+		"", "数据库密码")
+	executeCmd.PersistentFlags().StringVar(&edbc.Database, "db-schema",
+		"", "数据库名称")
+	executeCmd.PersistentFlags().StringVar(&edbc.CharSet, "db-charset",
+		config.DB_CHARSET, "数据库字符集")
+	executeCmd.PersistentFlags().IntVar(&edbc.Timeout, "db-timeout",
+		config.DB_TIMEOUT, "数据库timeout")
+	executeCmd.PersistentFlags().IntVar(&edbc.MaxIdelConns, "db-max-idel-conns",
+		config.DB_MAX_IDEL_CONNS, "数据库最大空闲连接数")
+	executeCmd.PersistentFlags().IntVar(&edbc.MaxOpenConns, "db-max-open-conns",
+		config.DB_MAX_OPEN_CONNS, "数据库最大连接数")
+	executeCmd.PersistentFlags().BoolVar(&edbc.AutoCommit, "db-auto-commit",
 		config.DB_AUTO_COMMIT, "数据库自动提交")
 }
